@@ -301,13 +301,14 @@ class _HomePageState extends State<HomePage> {
     return Scaffold(
       body: Column(
         children: [
-          // === Часть 1: Простые виджеты ===
+          
           Container(
             width: 100,
             height: 100,
             color: Colors.blue,
           ),
           Row(
+            
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: const [
               Text('Text 1'),
@@ -342,6 +343,8 @@ class _HomePageState extends State<HomePage> {
         onPressed: () {
           print('Button pressed!');
         },
+        backgroundColor: Colors.purple,
+        foregroundColor: Colors.red,
         child: const Icon(Icons.add),
       ),
     );
