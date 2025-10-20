@@ -71,6 +71,24 @@ class MainApp extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Image.network(
+                      'https://images.unsplash.com/photo-1517816743773-6e0fd518b4a6?w=800',
+                      height: 120,
+                      fit: BoxFit.cover,
+                    ),
+                    const SizedBox(height: 8),
+                    Image.network(
+                      'https://images.unsplash.com/photo-1517816743773-6e0fd518b4a6?w=800',
+                      height: 120,
+                      fit: BoxFit.cover,
+                    ),
+                    const SizedBox(height: 8),
+                    Image.network(
+                      'https://images.unsplash.com/photo-1517816743773-6e0fd518b4a6?w=800',
+                      height: 120,
+                      fit: BoxFit.cover,
+                    ),
+                    const SizedBox(height: 8),
+                    Image.network(
                       'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=800',
                       height: 120,
                       fit: BoxFit.cover,
@@ -104,8 +122,8 @@ class MainApp extends StatelessWidget {
           ],
         ),
         floatingActionButton: FloatingActionButton(
-      onPressed: () {
-        showDialog(
+         onPressed: () {
+          showDialog(
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
@@ -115,18 +133,18 @@ class MainApp extends StatelessWidget {
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-                  },
-                  child: const Text('OK'),
-                ),
-              ],
+                    },
+                      child: const Text('OK'),
+                    ),
+                  ],
+                );
+              },
             );
           },
-        );
-      },
-      backgroundColor: Colors.purple,
-      foregroundColor: Colors.red,
-      child: const Icon(Icons.add),
-    ),
+        backgroundColor: Colors.purple,
+        foregroundColor: Colors.red,
+        child: const Icon(Icons.add),
+        ),
       ),
     );
   }
