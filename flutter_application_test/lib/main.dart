@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:intl/intl.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Пытаемся загрузить переменные окружения (опционально)
   try {
     await dotenv.load(fileName: "assets/key.env");
   } catch (e) {
     print('Файл key.env не найден, используется только HTTP запрос');
   }
-  
+
   runApp(const MainApp());
 }
 
@@ -24,11 +26,9 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Test App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-      ),
+      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       home: const HomePage(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
@@ -44,8 +44,8 @@ class _HomePageState extends State<HomePage> {
   final TextEditingController _messageController = TextEditingController();
   bool _isConnected = false;
   String? _errorMessage;
-  String _inputValue = ''; // Состояние для поля ввода
-  Future<List<Map<String, dynamic>>>? _messagesFuture; // Future для FutureBuilder
+  Future<List<Map<String, dynamic>>>?
+  _messagesFuture; // Future для FutureBuilder
 
   @override
   void initState() {
@@ -68,7 +68,7 @@ class _HomePageState extends State<HomePage> {
         final jsonData = json.decode(response.body);
         supabaseUrl = jsonData['url'] as String?;
         supabaseKey = jsonData['key'] as String?;
-        
+
         if (supabaseUrl == null || supabaseKey == null) {
           throw Exception('Не удалось получить URL или ключ из ответа');
         }
@@ -79,13 +79,14 @@ class _HomePageState extends State<HomePage> {
       // Если HTTP запрос не удался, пытаемся получить из переменных окружения
       print('Не удалось получить данные через HTTP: $e');
       print('Попытка получить данные из переменных окружения...');
-      
+
       supabaseUrl = dotenv.env['SUPABASE_URL'];
       supabaseKey = dotenv.env['SUPABASE_ANON_KEY'];
-      
+
       if (supabaseUrl == null || supabaseKey == null) {
         setState(() {
-          _errorMessage = 'Не удалось получить ключи Supabase.\n'
+          _errorMessage =
+              'Не удалось получить ключи Supabase.\n'
               'Ошибка HTTP: $e\n'
               'Переменные окружения также не найдены.\n'
               'Проверьте подключение к интернету и настройки.';
@@ -96,10 +97,7 @@ class _HomePageState extends State<HomePage> {
 
     // Использование полученных данных для подключения к Supabase
     try {
-      await Supabase.initialize(
-        url: supabaseUrl,
-        anonKey: supabaseKey,
-      );
+      await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
       setState(() {
         _isConnected = true;
         _errorMessage = null;
@@ -125,7 +123,7 @@ class _HomePageState extends State<HomePage> {
     if (!_isConnected) {
       await _initializeSupabase();
     }
-    
+
     try {
       final response = await Supabase.instance.client
           .from('messages')
@@ -153,10 +151,7 @@ class _HomePageState extends State<HomePage> {
       });
 
       _messageController.clear();
-      setState(() {
-        _inputValue = '';
-      });
-      
+
       // Автоматически обновляем список при получении новых данных
       _updateMessages();
     } catch (e) {
@@ -168,9 +163,7 @@ class _HomePageState extends State<HomePage> {
 
   // Управление состоянием - обработка изменений в поле ввода
   void _onInputChanged(String value) {
-    setState(() {
-      _inputValue = value;
-    });
+    // Состояние обновляется через контроллер
   }
 
   // Управление состоянием - обработка нажатия кнопки обновления
@@ -188,258 +181,646 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
+  String _formatDateTime(String? dateTimeString) {
+    if (dateTimeString == null) return '';
+    try {
+      final dateTime = DateTime.parse(dateTimeString);
+      return DateFormat('d MMMM yyyy, HH:mm', 'ru_RU').format(dateTime);
+    } catch (e) {
+      return dateTimeString;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Flutter Test App'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-      ),
-      body: Column(
-        children: [
-          // Первый Container с заданными параметрами
-          Container(
-            width: double.infinity,
-            height: 100,
-            color: Colors.blueAccent,
-            child: const Center(
-              child: Text(
-                'Добро пожаловать!',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          
-          // Row с тремя элементами Text
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: const [
-                Text(
-                  'Первый',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  'Второй',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  'Третий',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Второй Container с другими параметрами
-          Container(
-            width: double.infinity,
-            height: 60,
-            color: Colors.green,
-            child: const Center(
-              child: Text(
-                'Статус подключения',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
-          
-          // Отображение ошибок
-          if (_errorMessage != null)
-            Container(
-              padding: const EdgeInsets.all(8),
-              color: Colors.red.shade100,
-              width: double.infinity,
-              child: Text(
-                _errorMessage!,
-                style: const TextStyle(color: Colors.red),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          
-          // Поле ввода сообщения с обработкой изменений (onChanged)
-          // Поле ввода → Управление состоянием
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: const InputDecoration(
-                      hintText: 'Введите сообщение...',
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: _onInputChanged, // Отправка в управление состоянием
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _isConnected ? _sendMessage : null,
-                  child: const Text('Отправить'),
-                ),
-              ],
-            ),
-          ),
-          
-          // Expanded с Row и двумя CircleAvatar
-          Expanded(
-            child: Column(
-              children: [
-                // Row с CircleAvatar
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Colors.orange,
-                        child: Icon(Icons.person, color: Colors.white),
-                      ),
-                      const SizedBox(width: 16),
-                      CircleAvatar(
-                        radius: 40,
-                        backgroundImage: NetworkImage(
-                          'https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d?w=200',
-                        ),
-                        onBackgroundImageError: (exception, stackTrace) {
-                          // Обработка ошибки загрузки изображения
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // FutureBuilder для отображения списка сообщений
-                // Supabase DB → FutureBuilder → List.generate → UI
-                Expanded(
-                  child: _isConnected && _messagesFuture != null
-                      ? FutureBuilder<List<Map<String, dynamic>>>(
-                          future: _messagesFuture, // Получение данных из Supabase
-                          builder: (context, snapshot) {
-                            // Проверка состояния подключения (connectionState)
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                              return const Center(
-                                child: CircularProgressIndicator(),
-                              );
-                            }
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(color: Color(0xFF1A1A1A)),
+        child: Stack(
+          children: [
+            // Background image would go here if provided
+            // For now, using chrome silver gradient overlay
 
-                            // Проверка наличия ошибки (hasError)
-                            if (snapshot.hasError) {
-                              return Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.error_outline,
-                                      size: 48,
-                                      color: Colors.red,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'Ошибка: ${snapshot.error}',
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    ElevatedButton(
-                                      onPressed: _updateMessages,
-                                      child: const Text('Повторить'),
-                                    ),
+            // Chrome Glass Mobile Interface
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: const Alignment(-1.0, -1.0),
+                  end: const Alignment(1.0, 1.0),
+                  colors: [
+                    const Color(0xFFC0C0C0).withOpacity(0.15), // silver
+                    const Color(0xFF808080).withOpacity(0.15), // grey
+                    const Color(0xFFA9A9A9).withOpacity(0.15), // dark grey
+                  ],
+                  stops: const [0.0, 0.5, 1.0],
+                ),
+              ),
+              child: Column(
+                children: [
+                  // Mobile Header - Chrome Silver
+                  Container(
+                    padding: EdgeInsets.only(
+                      top: MediaQuery.of(context).padding.top + 24,
+                      bottom: 24,
+                      left: 24,
+                      right: 24,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: const Alignment(-1.0, -1.0),
+                        end: const Alignment(1.0, 1.0),
+                        colors: [
+                          const Color(0xFFC0C0C0).withOpacity(0.25),
+                          const Color(0xFFD3D3D3).withOpacity(0.2),
+                          const Color(0xFFA9A9A9).withOpacity(0.25),
+                        ],
+                        stops: const [0.0, 0.5, 1.0],
+                      ),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: Colors.white.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFC0C0C0).withOpacity(0.2),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // Main Header
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            ShaderMask(
+                              shaderCallback: (bounds) => const LinearGradient(
+                                begin: Alignment(-1.0, -1.0),
+                                end: Alignment(1.0, 1.0),
+                                colors: [
+                                  Color(0xFFE8E8E8),
+                                  Color(0xFFC0C0C0),
+                                  Color(0xFFA8A8A8),
+                                ],
+                              ).createShader(bounds),
+                              child: const Text(
+                                'Добро пожаловать',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: const Color(
+                                    0xFFC0C0C0,
+                                  ).withOpacity(0.6),
+                                  width: 2,
+                                ),
+                                gradient: LinearGradient(
+                                  begin: const Alignment(-1.0, -1.0),
+                                  end: const Alignment(1.0, 1.0),
+                                  colors: [
+                                    const Color(0xFFD3D3D3).withOpacity(0.3),
+                                    const Color(0xFFA9A9A9).withOpacity(0.3),
                                   ],
                                 ),
-                              );
-                            }
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFFC0C0C0,
+                                    ).withOpacity(0.5),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 0),
+                                  ),
+                                ],
+                              ),
+                              child: CircleAvatar(
+                                radius: 26,
+                                backgroundColor: Colors.transparent,
+                                backgroundImage: const NetworkImage(
+                                  'https://i.ibb.co/5Wxmwyqg/630.png',
+                                ),
+                                onBackgroundImageError:
+                                    (exception, stackTrace) {},
+                                
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        // Connection Status Indicator
+                        Row(
+                          children: [
+                            Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: _isConnected
+                                        ? const Color(0xFFCBD5E1) // slate-300
+                                        : const Color(0xFF64748B), // slate-500
+                                    boxShadow: _isConnected
+                                        ? [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFFCBD5E1,
+                                              ).withOpacity(0.9),
+                                              blurRadius: 15,
+                                              spreadRadius: 0,
+                                            ),
+                                          ]
+                                        : [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFF64748B,
+                                              ).withOpacity(0.8),
+                                              blurRadius: 15,
+                                              spreadRadius: 0,
+                                            ),
+                                          ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.wifi,
+                              size: 16,
+                              color: _isConnected
+                                  ? const Color(0xFFCBD5E1)
+                                  : const Color(0xFF64748B),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              _isConnected ? 'Подключено' : 'Не подключено',
+                              style: TextStyle(
+                                color: const Color(0xFFE2E8F0), // slate-200
+                                fontSize: 14,
+                                shadows: [
+                                  const Shadow(
+                                    color: Colors.black45,
+                                    blurRadius: 3,
+                                    offset: Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
 
-                            // Проверка наличия данных (hasData)
-                            if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                              return const Center(
-                                child: Text('Нет сообщений'),
-                              );
-                            }
+                  // Error message
+                  if (_errorMessage != null)
+                    Container(
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontSize: 12,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
 
-                            // Отображение списка сообщений используя List.generate
-                            // FutureBuilder → List.generate
-                            return RefreshIndicator(
-                              onRefresh: () async {
-                                _updateMessages();
-                                await _messagesFuture;
-                              },
-                              child: ListView(
-                                children: List.generate(
-                                  snapshot.data!.length,
-                                  (index) {
-                                    final message = snapshot.data![index];
-                                    return Card(
-                                      margin: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 4,
-                                      ),
-                                      child: ListTile(
-                                        title: Text(
-                                          message['message'] ?? '',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
+                  // Mobile Input Area - Chrome
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 20,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: const Alignment(-1.0, -1.0),
+                                end: const Alignment(1.0, 1.0),
+                                colors: [
+                                  const Color(0xFFA9A9A9).withOpacity(0.2),
+                                  const Color(0xFF808080).withOpacity(0.15),
+                                  const Color(0xFFC0C0C0).withOpacity(0.2),
+                                ],
+                                stops: const [0.0, 0.5, 1.0],
+                              ),
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: const Color(0xFFC0C0C0).withOpacity(0.3),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.3),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: TextField(
+                              controller: _messageController,
+                              onChanged: _onInputChanged,
+                              onSubmitted: (_) => _sendMessage(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'Введите сообщение...',
+                                hintStyle: const TextStyle(
+                                  color: Color(0xFFCBD5E1),
+                                ),
+                                filled: false,
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 24,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: _isConnected ? _sendMessage : null,
+                            borderRadius: BorderRadius.circular(24),
+                            child: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment(-1.0, -1.0),
+                                  end: Alignment(1.0, 1.0),
+                                  colors: [
+                                    Color(0xFFC0C0C0),
+                                    Color(0xFFA8A8A8),
+                                    Color(0xFF909090),
+                                  ],
+                                  stops: [0.0, 0.5, 1.0],
+                                ),
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(
+                                      0xFFC0C0C0,
+                                    ).withOpacity(0.5),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                Icons.send,
+                                color: _isConnected
+                                    ? Colors.white
+                                    : Colors.white.withOpacity(0.5),
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Mobile Messages Area - Chrome Style
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: const Alignment(-1.0, -1.0),
+                            end: const Alignment(1.0, 1.0),
+                            colors: [
+                              const Color(0xFFA9A9A9).withOpacity(0.15),
+                              const Color(0xFF808080).withOpacity(0.1),
+                              const Color(0xFFC0C0C0).withOpacity(0.15),
+                            ],
+                            stops: const [0.0, 0.5, 1.0],
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(
+                            color: const Color(0xFFC0C0C0).withOpacity(0.3),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: _isConnected && _messagesFuture != null
+                              ? FutureBuilder<List<Map<String, dynamic>>>(
+                                  future: _messagesFuture,
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return const Center(
+                                        child: CircularProgressIndicator(
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
+                                        ),
+                                      );
+                                    }
+
+                                    if (snapshot.hasError) {
+                                      return Center(
+                                        child: Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            const Icon(
+                                              Icons.error_outline,
+                                              size: 48,
+                                              color: Colors.redAccent,
+                                            ),
+                                            const SizedBox(height: 16),
+                                            Text(
+                                              'Ошибка: ${snapshot.error}',
+                                              style: const TextStyle(
+                                                color: Colors.white70,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                            const SizedBox(height: 16),
+                                            ElevatedButton(
+                                              onPressed: _updateMessages,
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.white
+                                                    .withOpacity(0.2),
+                                                foregroundColor: Colors.white,
+                                              ),
+                                              child: const Text('Повторить'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }
+
+                                    if (!snapshot.hasData ||
+                                        snapshot.data!.isEmpty) {
+                                      return Center(
+                                        child: Text(
+                                          'Нет сообщений',
+                                          style: TextStyle(
+                                            color: const Color(0xFFCBD5E1),
+                                            fontSize: 18,
+                                            shadows: [
+                                              const Shadow(
+                                                color: Colors.black45,
+                                                blurRadius: 3,
+                                                offset: Offset(0, 1),
+                                              ),
+                                            ],
                                           ),
                                         ),
-                                        subtitle: Text(
-                                          message['created_at'] != null
-                                              ? DateTime.parse(
-                                                      message['created_at'])
-                                                  .toString()
-                                              : '',
-                                        ),
+                                      );
+                                    }
+
+                                    return RefreshIndicator(
+                                      onRefresh: () async {
+                                        _updateMessages();
+                                        await _messagesFuture;
+                                      },
+                                      color: Colors.white,
+                                      child: ListView.builder(
+                                        padding: const EdgeInsets.all(20),
+                                        itemCount: snapshot.data!.length,
+                                        itemBuilder: (context, index) {
+                                          final message = snapshot.data![index];
+                                          return Container(
+                                            margin: const EdgeInsets.only(
+                                              bottom: 16,
+                                            ),
+                                            padding: const EdgeInsets.all(20),
+                                            decoration: BoxDecoration(
+                                              gradient: LinearGradient(
+                                                begin: const Alignment(
+                                                  -1.0,
+                                                  -1.0,
+                                                ),
+                                                end: const Alignment(1.0, 1.0),
+                                                colors: [
+                                                  const Color(
+                                                    0xFFD3D3D3,
+                                                  ).withOpacity(0.25),
+                                                  const Color(
+                                                    0xFFC0C0C0,
+                                                  ).withOpacity(0.2),
+                                                  const Color(
+                                                    0xFFA9A9A9,
+                                                  ).withOpacity(0.2),
+                                                  const Color(
+                                                    0xFF808080,
+                                                  ).withOpacity(0.15),
+                                                  const Color(
+                                                    0xFFC0C0C0,
+                                                  ).withOpacity(0.25),
+                                                ],
+                                                stops: const [
+                                                  0.0,
+                                                  0.25,
+                                                  0.5,
+                                                  0.75,
+                                                  1.0,
+                                                ],
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                              border: Border.all(
+                                                color: const Color(
+                                                  0xFFC0C0C0,
+                                                ).withOpacity(0.4),
+                                              ),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.3),
+                                                  blurRadius: 25,
+                                                  offset: const Offset(0, 8),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  message['message'] ?? '',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 16,
+                                                    shadows: [
+                                                      Shadow(
+                                                        color: Colors.black45,
+                                                        blurRadius: 3,
+                                                        offset: Offset(0, 1),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 8),
+                                                Text(
+                                                  _formatDateTime(
+                                                    message['created_at'],
+                                                  ),
+                                                  style: TextStyle(
+                                                    color: const Color(
+                                                      0xFFE2E8F0,
+                                                    ),
+                                                    fontSize: 14,
+                                                    shadows: [
+                                                      const Shadow(
+                                                        color: Colors.black45,
+                                                        blurRadius: 2,
+                                                        offset: Offset(0, 1),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
                                       ),
                                     );
                                   },
+                                )
+                              : Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const CircularProgressIndicator(
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              Colors.white,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'Подключение к базе данных...',
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(0.7),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Mobile Refresh Button - Chrome
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _onUpdateButtonPressed,
+                        borderRadius: BorderRadius.circular(24),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: const Alignment(-1.0, -1.0),
+                              end: const Alignment(1.0, 1.0),
+                              colors: [
+                                const Color(0xFFD3D3D3).withOpacity(0.3),
+                                const Color(0xFFC0C0C0).withOpacity(0.25),
+                                const Color(0xFFA9A9A9).withOpacity(0.25),
+                                const Color(0xFF808080).withOpacity(0.2),
+                                const Color(0xFFC0C0C0).withOpacity(0.3),
+                              ],
+                              stops: const [0.0, 0.25, 0.5, 0.75, 1.0],
+                            ),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: const Color(0xFFC0C0C0).withOpacity(0.4),
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFFC0C0C0).withOpacity(0.3),
+                                blurRadius: 20,
+                                offset: const Offset(0, 4),
                               ),
-                            );
-                          },
-                        )
-                      : const Center(
-                          child: Column(
+                            ],
+                          ),
+                          child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              CircularProgressIndicator(),
-                              SizedBox(height: 16),
-                              Text('Подключение к базе данных...'),
+                              Icon(
+                                Icons.refresh,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Обновить',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  shadows: [
+                                    Shadow(
+                                      color: Colors.black45,
+                                      blurRadius: 3,
+                                      offset: Offset(0, 1),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                ),
-              ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-      // FloatingActionButton с обработчиком onPressed
-      // Кнопка обновления → Управление состоянием
-      floatingActionButton: FloatingActionButton(
-        onPressed: _onUpdateButtonPressed, // Отправка в управление состоянием
-        backgroundColor: Colors.blue,
-        child: const Icon(Icons.refresh),
+          ],
+        ),
       ),
     );
   }
-
 }
