@@ -97,8 +97,8 @@ class _HomePageState extends State<HomePage> {
     // Использование полученных данных для подключения к Supabase
     try {
       await Supabase.initialize(
-        url: supabaseUrl!,
-        anonKey: supabaseKey!,
+        url: supabaseUrl,
+        anonKey: supabaseKey,
       );
       setState(() {
         _isConnected = true;
