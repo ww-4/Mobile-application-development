@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
+import 'auth_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Пытаемся загрузить переменные окружения (опционально)
   try {
     await dotenv.load(fileName: "assets/key.env");
   } catch (e) {
@@ -43,75 +40,45 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final TextEditingController _messageController = TextEditingController();
   bool _isConnected = false;
+  bool _isAuthenticated = false;
   String? _errorMessage;
-  Future<List<Map<String, dynamic>>>?
-  _messagesFuture; // Future для FutureBuilder
+  Future<List<Map<String, dynamic>>>? _messagesFuture;
+  int _currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _initializeSupabase();
-    
   }
 
   Future<void> _initializeSupabase() async {
-    String? supabaseUrl;
-    String? supabaseKey;
+    final supabaseUrl = dotenv.env['SUPABASE_URL'];
+    final supabaseKey = dotenv.env['SUPABASE_ANON_KEY'];
 
-    
-    // Получение ключа и URL через HTTP PATCH запрос
-    try {
-      final response = await http.patch(
-        Uri.parse('https://college.panfilius.ru/keys.php'),
-      );
-
-      if (response.statusCode == 200) {
-        // Разбор полученного ответа в формате JSON
-        final jsonData = json.decode(response.body);
-        supabaseUrl = jsonData['url'] as String?;
-        supabaseKey = jsonData['key'] as String?;
-
-        if (supabaseUrl == null || supabaseKey == null) {
-          throw Exception('Не удалось получить URL или ключ из ответа');
-        }
-      } else {
-        throw Exception('Ошибка HTTP: ${response.statusCode}');
-      }
-    } catch (e) {
-      // Если HTTP запрос не удался, пытаемся получить из переменных окружения
-      print('Не удалось получить данные через HTTP: $e');
-      print('Попытка получить данные из переменных окружения...');
-
-      supabaseUrl = dotenv.env['SUPABASE_URL'];
-      supabaseKey = dotenv.env['SUPABASE_ANON_KEY'];
-
-      if (supabaseUrl == null || supabaseKey == null) {
-        setState(() {
-          _errorMessage =
-              'Не удалось получить ключи Supabase.\n'
-              'Ошибка HTTP: $e\n'
-              'Переменные окружения также не найдены.\n'
-              'Проверьте подключение к интернету и настройки.';
-        });
-        return;
-      }
+    if (supabaseUrl == null || supabaseKey == null) {
+      setState(() {
+        _errorMessage =
+            
+            'Проверьте файл key.env и настройки.';
+      });
+      return;
     }
 
-    // Использование полученных данных для подключения к Supabase
     try {
       await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
 
-      Supabase.instance.client.from('messages')
-    .stream(primaryKey: ['id'])
-    .listen((List<Map<String, dynamic>> data) {
+      Supabase.instance.client
+          .from('messages')
+          .stream(primaryKey: ['id'])
+          .listen((List<Map<String, dynamic>> data) {
         print(data);
-    }); 
-    
+      });
+
       setState(() {
         _isConnected = true;
         _errorMessage = null;
       });
-      _updateMessages(); // Обновляем Future для FutureBuilder
+      _updateMessages();
     } catch (e) {
       setState(() {
         _errorMessage = 'Ошибка подключения к Supabase: $e';
@@ -119,7 +86,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Управление состоянием - обновление Future для FutureBuilder
   void _updateMessages() {
     setState(() {
       _messagesFuture = _getMessagesFuture();
@@ -127,7 +93,6 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  // Получение данных из Supabase
   Future<List<Map<String, dynamic>>> _getMessagesFuture() async {
     if (!_isConnected) {
       await _initializeSupabase();
@@ -148,20 +113,16 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Управление состоянием - обработка отправки сообщения
   Future<void> _sendMessage() async {
     if (!_isConnected || _messageController.text.trim().isEmpty) return;
 
     try {
-      // Отправка сообщения через insert в базу данных
       await Supabase.instance.client.from('messages').insert({
         'message': _messageController.text.trim(),
         'created_at': DateTime.now().toIso8601String(),
       });
 
       _messageController.clear();
-
-      // Автоматически обновляем список при получении новых данных
       _updateMessages();
     } catch (e) {
       setState(() {
@@ -170,19 +131,62 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Управление состоянием - обработка изменений в поле ввода
-  void _onInputChanged(String value) {
-    // Состояние обновляется через контроллер
+  void _onUpdateButtonPressed() {
+    _updateMessages();
   }
 
-  // Управление состоянием - обработка нажатия кнопки обновления
-  void _onUpdateButtonPressed() {
-    print('Button pressed!');
-    setState(() {
-      // Кнопка обновления с использованием setState
-      _updateMessages();
-    });
+  Future<void> _handleLogin() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (context) => const AuthScreen(isLogin: true)),
+    );
+
+    if (result == true) {
+      setState(() {
+        _isAuthenticated = true;
+      });
+    }
   }
+
+  Future<void> _handleSignUp() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (context) => const AuthScreen(isLogin: false)),
+    );
+
+    if (result == true) {
+      setState(() {
+        _isAuthenticated = true;
+      });
+    }
+  }
+
+  Future<void> _handleSignOut() async {
+    try {
+      await Supabase.instance.client.auth.signOut();
+      setState(() {
+        _isAuthenticated = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Вы вышли из аккаунта'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка выхода: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
 
   @override
   void dispose() {
@@ -203,6 +207,81 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: const Alignment(-1.0, -1.0),
+            end: const Alignment(1.0, 1.0),
+            colors: [
+              const Color(0xFF808080).withOpacity(0.9),
+              const Color(0xFF707070).withOpacity(0.85),
+              const Color(0xFF606060).withOpacity(0.9),
+            ],
+            stops: const [0.0, 0.5, 1.0],
+          ),
+          border: Border(
+            top: BorderSide(
+              color: const Color(0xFF505050).withOpacity(0.5),
+              width: 1,
+            ),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+            if (_isAuthenticated) {
+              // Пользователь вошел: Настройки / Выход
+              if (index == 0) {
+                // Настройки - пока без функционала
+              } else if (index == 1) {
+                _handleSignOut();
+              }
+            } else {
+              // Пользователь не вошел: Вход / Регистрация
+              if (index == 0) {
+                _handleLogin();
+              } else if (index == 1) {
+                _handleSignUp();
+              }
+            }
+          },
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          selectedItemColor: Colors.white,
+          unselectedItemColor: Colors.white,
+          items: _isAuthenticated
+              ? const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.settings),
+                    label: 'Настройки',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.logout),
+                    label: 'Выход',
+                  ),
+                ]
+              : const [
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.login),
+                    label: 'Вход',
+                  ),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.person_add),
+                    label: 'Регистрация',
+                  ),
+                ],
+        ),
+      ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -456,7 +535,6 @@ class _HomePageState extends State<HomePage> {
                             ),
                             child: TextField(
                               controller: _messageController,
-                              onChanged: _onInputChanged,
                               onSubmitted: (_) => _sendMessage(),
                               style: const TextStyle(
                                 color: Colors.white,
@@ -814,7 +892,7 @@ class _HomePageState extends State<HomePage> {
                                       color: Colors.black45,
                                       blurRadius: 3,
                                       offset: Offset(0, 1),
-                                    ),
+                                     ),
                                   ],
                                 ),
                               ),
